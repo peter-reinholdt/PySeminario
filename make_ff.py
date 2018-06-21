@@ -38,8 +38,8 @@ for line in itp:
         aj = int(split[1]) - 1
         function_type = int(split[2])
         if function_type == 1:
+            bond_length = Seminario.get_bond_length(ai, aj)
             bond_constant = Seminario.get_bond_constant(ai, aj)
-            bond_length = 999
         else:
             raise NotImplementedError('Only works with harmonic bond type')
         print("{}   {}  {}  {}  {}".format(ai + 1, aj + 1, function_type, bond_length, bond_constant))

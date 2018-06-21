@@ -58,7 +58,7 @@ class SeminarioMethod:
             if i != j:
                 self.hessian[j,i] = self._hessian_list[idx]
             j += 1
-        self.coordinates = np.array([[1,-2,0],[3,1,4],[0,-1,2]])
+     
             
     def set_energy_unit(self, unit):
         if unit.lower() == "kj/mol":
@@ -192,4 +192,7 @@ class SeminarioMethod:
         """Atom_idx starts counting from zero.
         B, C, D are all connected to A. I.e. A is the central atom."""
         return self._calc_improrper_constant(atom_idx_A, atom_idx_B, atom_idx_C, atom_idx_D)*self._energy_unit/(self._angle_unit**2)
-        
+    
+    def get_bond_length(self, atom_idx_A, atom_idx_B):
+        """Atom_idx starts counting from zero."""
+        return np.linalg.norm(self._calc_distance_vector(atom_idx_A, atom_idx_B)) * self._length_unit

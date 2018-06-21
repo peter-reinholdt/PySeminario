@@ -58,7 +58,6 @@ class SeminarioMethod:
             if i != j:
                 self.hessian[j,i] = self._hessian_list[idx]
             j += 1
-        self.coordinates = np.array([[1,-2,0],[3,1,4],[0,-1,2]])
             
     def set_energy_unit(self, unit):
         if unit.lower() == "kj/mol":
@@ -142,7 +141,7 @@ class SeminarioMethod:
         u_BC = self._calc_normal_distance_vector(atom_idx_B, atom_idx_C)
         R_BA = self._calc_distance_vector(atom_idx_B, atom_idx_A)
         R_CD = self._calc_distance_vector(atom_idx_C, atom_idx_D)
-        u_NABC = np.cross(u_CB, U_AB)/np.linalg.norm(np.cross(u_CB, U_AB))
+        u_NABC = np.cross(u_CB, u_AB)/np.linalg.norm(np.cross(u_CB, u_AB))
         u_NBCD = np.cross(u_DC, u_BC)/np.linalg.norm(np.cross(u_DC, u_BC))
         eigvals_AB, eigvecs_AB = np.linalg.eig(hessian_block_AB)
         eigvals_DC, eigvecs_DC = np.linalg.eig(hessian_block_DC)
@@ -191,5 +190,4 @@ class SeminarioMethod:
     def get_improper_constant(self, atom_idx_A, atom_idx_B, atom_idx_C, atom_idx_D):
         """Atom_idx starts counting from zero.
         B, C, D are all connected to A. I.e. A is the central atom."""
-        return self._calc_improrper_constant(atom_idx_A, atom_idx_B, atom_idx_C, atom_idx_D)*self._energy_unit/(self._angle_unit**2)
-        
+        return self._calc_improper_constant(atom_idx_A, atom_idx_B, atom_idx_C, atom_idx_D)*self._energy_unit/(self._angle_unit**2)

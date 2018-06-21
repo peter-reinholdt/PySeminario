@@ -18,7 +18,7 @@ with open(args.itp, "r") as f:
 Seminario = SeminarioMethod(args.fchk)
 Seminario.set_energy_unit('kj/mol')
 Seminario.set_length_unit('nm')
-print(Seminario.hessian)
+Seminario.set_angle_unit('degree')
 
 #parse itp and insert new stuff
 for line in itp:
@@ -49,8 +49,8 @@ for line in itp:
         ak = int(split[2]) - 1
         function_type = int(split[3])
         if function_type == 1:
+            angle = Seminario.get_angle(ai,aj,ak)
             angle_constant = Seminario.get_angle_constant(ai, aj, ak)
-            angle = 999
         else:
             raise NotImplementedError('Only works with harmonic bond type')
         print("{}   {}  {}  {}  {}  {}".format(ai + 1, aj + 1, ak + 1, function_type, angle, angle_constant))
@@ -65,7 +65,7 @@ for line in itp:
             dihedral_constant = Seminario.get_dihedral_constant(ai, aj, ak, al)
             dihedral = 999
         elif function_type == 4:
-            dihedral_constant = Seminario.get_improper_constant(ak, ai, aj, al)
+            dihedral_constant = Seminario.get_improper_constant(ai, aj, ak, al)
             dihedral = 999
         else:
             raise NotImplementedError('Only works with harmonic bond type')

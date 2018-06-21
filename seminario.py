@@ -195,3 +195,12 @@ class SeminarioMethod:
     def get_bond_length(self, atom_idx_A, atom_idx_B):
         """Atom_idx starts counting from zero."""
         return np.linalg.norm(self._calc_distance_vector(atom_idx_A, atom_idx_B)) * self._length_unit
+    
+    def get_angle(self, atom_idx_A, atom_idx_B, atom_idx_C):
+        """Atom_idx starts counting from zero."""
+        AB = self._calc_distance_vector(atom_idx_A, atom_idx_B)
+        BC = -  self._calc_distance_vector(atom_idx_B, atom_idx_C)
+        #A · B = |A| * |B| * cos(Θ)
+        angle = np.arccos(np.dot(AB, BC) / (np.linalg.norm(AB) * np.linalg.norm(BC)))
+        return angle * self._angle_unit
+

@@ -186,8 +186,7 @@ class SeminarioMethod:
             contribution_ABC += eigvals_AB[i]*np.abs(np.dot(u_NABC,eigvecs_AB[i]))
             contribution_BCD += eigvals_DC[i]*np.abs(np.dot(u_NBCD,eigvecs_DC[i]))
         contribution_ABC *= np.dot(R_BA, R_BA)*np.linalg.norm(np.cross(u_AB,u_BC))**2
-        # I have used u_DC, but in eq (17) it is u_CD. I think this should be the same,
-        #  for the line below.
+        # I have used u_DC, but in eq (17) it is u_CD. I think this should be the same, for the line below.
         contribution_BCD *= np.dot(R_CD, R_CD)*np.linalg.norm(np.cross(u_BC,u_DC))**2
         force_constant = 1.0/(1.0/contribution_ABC + 1.0/contribution_BCD)
         return force_constant
@@ -262,6 +261,7 @@ class SeminarioMethod:
         contribution_AB = correction_AB / contribution_AB
         contribution_CB = correction_CB / contribution_CB
         return 1.0/(contribution_AB + contribution_CB)
+       
         
     def get_bond_constant(self, atom_idx_A, atom_idx_B):
         """Atom_idx starts counting from zero."""

@@ -64,7 +64,7 @@ class SeminarioMethod:
             self._energy_unit = 2625.5002
         elif unit.lower() == "kcal/mol":
             self._energy_unit = 627.509608030593
-        elif unit.lower() == "hartree" or unit.lower() == "au":\
+        elif unit.lower() == "hartree" or unit.lower() == "au":
             self._energy_unit = 1.0
         else:
             raise ValueError("Given unit not recognized")
@@ -85,7 +85,7 @@ class SeminarioMethod:
         elif unit.lower() == "radians" or unit.lower() == "radian":
             self._angle_unit = 1.0
         else:
-            Raise ValueError("Given unit not recognized")
+            raise ValueError("Given unit not recognized")
             
     def _calc_normal_distance_vector(self, atom_idx_A, atom_idx_B):
         return (self.coordinates[atom_idx_A,:]-self.coordinates[atom_idx_B,:])/np.linalg.norm(self.coordinates[atom_idx_A,:]-self.coordinates[atom_idx_B,:])

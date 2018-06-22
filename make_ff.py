@@ -49,10 +49,12 @@ for line in itp:
         ak = int(split[2]) - 1
         function_type = int(split[3])
         if function_type == 1:
+            Seminario.set_angle_unit('degree')
             angle = Seminario.get_angle(ai,aj,ak)
+            Seminario.set_angle_unit('radian')
             angle_constant = Seminario.get_angle_constant(ai, aj, ak)
         else:
-            raise NotImplementedError('Only works with harmonic bond type')
+            raise NotImplementedError('Only works with harmonic angle type')
         print("{}   {}  {}  {}  {}  {}".format(ai + 1, aj + 1, ak + 1, function_type, angle, angle_constant))
     elif section_name == "dihedrals":
         ai = int(split[0]) - 1
@@ -62,13 +64,17 @@ for line in itp:
         function_type = int(split[4])
         multiplicity  = int(split[7])
         if function_type == 1:
+            Seminario.set_angle_unit('degree')
+            dihedral = 999
+            Seminario.set_angle_unit('radian')
             dihedral_constant = Seminario.get_dihedral_constant(ai, aj, ak, al)
-            dihedral = 999
         elif function_type == 4:
-            dihedral_constant = Seminario.get_improper_constant(ai, aj, ak, al)
+            Seminario.set_angle_unit('degree')
             dihedral = 999
+            Seminario.set_angle_unit('radian')
+            dihedral_constant = Seminario.get_improper_constant(ai, aj, ak, al)
         else:
-            raise NotImplementedError('Only works with harmonic bond type')
+            raise NotImplementedError('Only works diheral type 1 or 4')
         print("{}   {}  {}  {}  {}  {}  {}  {}".format(ai + 1, aj + 1, ak + 1, al + 1, 
                                                         function_type, dihedral, dihedral_constant, multiplicity))
     else:

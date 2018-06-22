@@ -98,6 +98,21 @@ class SeminarioMethod:
     def _calc_distance_vector(self, atom_idx_A, atom_idx_B):
         return (self.coordinates[atom_idx_A,:]-self.coordinates[atom_idx_B,:])
     
+
+    def _calc_angle(self, atom_idx_A, atom_idx_B, atom_idx_C):
+        AB = self._calc_distance_vector(atom_idx_A, atom_idx_B)
+        BC = -  self._calc_distance_vector(atom_idx_B, atom_idx_C)
+        #A · B = |A| * |B| * cos(Θ)
+        angle = np.arccos(np.dot(AB, BC) / (np.linalg.norm(AB) * np.linalg.norm(BC)))
+        return angle
+
+    def _calc_dihedral_angle(self, atom_idx_A, atom_idx_B, atom_idx_C, atom_idx_D):
+        b1 = self._calc_distance_vector(atom_idx_A, atom_idx_B)
+        b2 = self._calc_distance_vector(atom_idx_B, atom_idx_C)
+        b3 = self._calc_distance_vector(atom_idx_C, atom_idx_D)
+        b1xb2_x_b2xb3 = np.cross(np.cross(b1,b2), np.cross(b2,b3))
+        return np.arctan2(np.dot(b1xb2_x_b2xb3, b2/np.linalg.norm(b2)), b1xb2_x_b2xb3)
+
     
     def _calc_point_plane_distance(self, atom_idx_A, atom_idx_B, atom_idx_C, atom_idx_D):
         # Note that A is the point away from the plane in the calculation of the improper constant
@@ -295,9 +310,9 @@ class SeminarioMethod:
     
     def get_angle(self, atom_idx_A, atom_idx_B, atom_idx_C):
         """Atom_idx starts counting from zero."""
-        AB = self._calc_distance_vector(atom_idx_A, atom_idx_B)
-        BC = -  self._calc_distance_vector(atom_idx_B, atom_idx_C)
-        #A · B = |A| * |B| * cos(Θ)
-        angle = np.arccos(np.dot(AB, BC) / (np.linalg.norm(AB) * np.linalg.norm(BC)))
-        return angle * self._angle_unit
+        return self._get_angle(atom_idx_A, atom_idx_B, atom_idx_C) * self._angle_unit
+
+    def get_dihedral_angle(self, atom_idx_A, atom_idx_B, atom_idx_C, atom_idx_D):
+        """Atom_idx starts counting from zero."""
+        return self._get_dihedral_angle(atom_idx_A, atom_idx_B, atom_idx_C, atom_idx_D) * self._angle_unit
 

@@ -220,11 +220,9 @@ class SeminarioMethod:
             contribution_CB += eigvals_CB[i]*np.abs(np.dot(u_PC,eigvecs_CB[i]))
         contribution_AB *= np.dot(R_AB, R_AB)
         contribution_CB *= np.dot(R_CB, R_CB)
-        
         # From here the correction will be calculated.
         correction_AB = 0.0
         if len(AB_angles) != 1:
-            print("okay AB")
             for i in range(0, len(AB_angles)):
                 A,B,C = AB_angles[i]
                 u_AB_i = self._calc_normal_distance_vector(atom_idx_A, atom_idx_B)
@@ -234,10 +232,8 @@ class SeminarioMethod:
                 correction_AB += np.abs(np.dot(u_PA,u_PA_i))
             correction_AB = (correction_AB - 1.0)/(len(AB_angles) - 1.0)
         correction_AB += 1.0
-        
         correction_CB = 0.0
         if len(CB_angles) != 1:
-            print("okay CB")
             for i in range(0, len(CB_angles)):
                 C,B,A = CB_angles[i]
                 u_CB_i = self._calc_normal_distance_vector(atom_idx_C, atom_idx_B)
@@ -247,10 +243,8 @@ class SeminarioMethod:
                 correction_CB += np.abs(np.dot(u_PC, u_PA_i))
             correction_CB = (correction_CB - 1.0)/(len(CB_angles) - 1.0)
         correction_CB += 1.0
-        
-        contribution_AB = correction_AB/contribution_AB
-        contribution_CB = correction_CB/contribution_CB
-        
+        contribution_AB = correction_AB / contribution_AB
+        contribution_CB = correction_CB / contribution_CB
         return 1.0/(contribution_AB + contribution_CB)
         
     def get_bond_constant(self, atom_idx_A, atom_idx_B):
@@ -277,7 +271,6 @@ class SeminarioMethod:
     def get_modified_angle_constant(self, angle_list):
         """Takes the entire list of angles for which force
         constants are needed. Indexing starts at 0 for atom indecies."""
-        
         # B is the central atom in the angle
         angle_constants = np.zeros(len(angle_list))
         idx = 0
@@ -291,8 +284,7 @@ class SeminarioMethod:
                 if other_angle[1] == B and (other_angle[0] == C or other_angle[2] == C):
                     CB_list.append(other_angle)
             angle_constants[idx] = self._calc_modified_angle_constant(A, B, C, AB_list, CB_list)
-            idx += 1
-                    
+            idx += 1       
         return angle_constants*self._energy_unit/(self._angle_unit**2)
     
     

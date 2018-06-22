@@ -43,7 +43,7 @@ for line in itp:
             bond_constant = Seminario.get_bond_constant(ai, aj)
         else:
             raise NotImplementedError('Only works with harmonic bond type')
-        print("{}   {}  {}  {}  {}".format(ai + 1, aj + 1, function_type, bond_length, bond_constant))
+        print(f"{ai+1:4} {aj+1:4} {function_type:4} {bond_length:8.6f} {bond_constant:12.6f}")
     elif section_name == "angles" and "angles" in args.output_parms:
         ai = int(split[0]) - 1
         aj = int(split[1]) - 1
@@ -56,7 +56,7 @@ for line in itp:
             angle_constant = Seminario.get_angle_constant(ai, aj, ak)
         else:
             raise NotImplementedError('Only works with harmonic angle type')
-        print("{}   {}  {}  {}  {}  {}".format(ai + 1, aj + 1, ak + 1, function_type, angle, angle_constant))
+        print(f"{ai+1:4} {aj+1:4} {ak+1:4} {function_type:4} {angle:8.3f} {angle_constant:12.6f}")
     elif section_name == "dihedrals" and "dihedrals" in args.output_parms:
         ai = int(split[0]) - 1
         aj = int(split[1]) - 1
@@ -66,17 +66,16 @@ for line in itp:
         multiplicity  = int(split[7])
         if function_type == 1:
             Seminario.set_angle_unit('degree')
-            dihedral = 999
+            dihedral = Seminario.get_dihedral_angle(ai, aj, ak, al)
             Seminario.set_angle_unit('radian')
             dihedral_constant = Seminario.get_dihedral_constant(ai, aj, ak, al) / (multiplicity**2) 
         elif function_type == 4:
             Seminario.set_angle_unit('degree')
-            dihedral = 999
+            dihedral = Seminario.get_dihedral_angle(aj, ak, ai, al)
             Seminario.set_angle_unit('radian')
             dihedral_constant = Seminario.get_improper_constant(ai, aj, ak, al) / (multiplicity**2)
         else:
             raise NotImplementedError('Only works diheral type 1 or 4')
-        print("{}   {}  {}  {}  {}  {}  {}  {}".format(ai + 1, aj + 1, ak + 1, al + 1, 
-                                                        function_type, dihedral, dihedral_constant, multiplicity))
+        print(f"{ai+1:4} {aj+1:4} {ak+1:4} {al+1:4} {function_type:4} {dihedral: 8.3f}  {dihedral_constant:12.6f}  {multiplicity}")
     else:
         print(line, end='')

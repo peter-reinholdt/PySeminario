@@ -94,6 +94,7 @@ class SeminarioMethod:
         return (self.coordinates[atom_idx_A,:]-self.coordinates[atom_idx_B,:])
     
     def _calc_point_plane_distance(self, atom_idx_A, atom_idx_B, atom_idx_C, atom_idx_D):
+        # Note that A is the point away from the plane in the calculation of the improper constant
         vec_AB = self._calc_distance_vector(atom_idx_A, atom_idx_B)
         vec_AC = self._calc_distance_vector(atom_idx_A, atom_idx_C)
         vec_n = np.cross(vec_AB, vec_AC)
@@ -178,7 +179,7 @@ class SeminarioMethod:
             k_AN += eigvals_AB[i]*np.abs(np.dot(u_N,eigvecs_AB[i]))
             k_AN += eigvals_AC[i]*np.abs(np.dot(u_N,eigvecs_AC[i]))
             k_AN += eigvals_AD[i]*np.abs(np.dot(u_N,eigvecs_AD[i]))
-        force_constant = k_AN*self._calc_point_plane_distance(atom_idx_A, atom_idx_B, atom_idx_C, atom_idx_D)**2
+        force_constant = k_AN*self._calc_point_plane_distance(atom_idx_B, atom_idx_C, atom_idx_D, atom_idx_A)**2
         return force_constant
         
     def get_bond_constant(self, atom_idx_A, atom_idx_B):

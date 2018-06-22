@@ -68,12 +68,12 @@ for line in itp:
             Seminario.set_angle_unit('degree')
             dihedral = Seminario.get_dihedral_angle(ai, aj, ak, al)
             Seminario.set_angle_unit('radian')
-            dihedral_constant = Seminario.get_dihedral_constant(ai, aj, ak, al) / (multiplicity**2) 
+            dihedral_constant = Seminario.get_dihedral_constant(ai, aj, ak, al)
         elif function_type == 4:
             Seminario.set_angle_unit('degree')
             dihedral = Seminario.get_dihedral_angle(aj, ak, ai, al)
             Seminario.set_angle_unit('radian')
-            dihedral_constant = Seminario.get_improper_constant(ai, aj, ak, al) / (multiplicity**2)
+            dihedral_constant = Seminario.get_improper_constant(ak, ai, aj, al)
         else:
             raise NotImplementedError('Only works diheral type 1 or 4')
         print(f"{ai+1:4} {aj+1:4} {ak+1:4} {al+1:4} {function_type:4} {dihedral: 8.3f}  {dihedral_constant:12.6f}  {multiplicity}")

@@ -13,8 +13,8 @@ class SeminarioMethod:
         J. M. Seminario
         https://doi.org/10.1002/(SICI)1097-461X(1996)60:7<1271::AID-QUA8>3.0.CO;2-W
         """
-        self._energy_unit = 1.0 # baseline is au
-        self._length_unit = 1.0 # baseline is au
+        self._energy_unit = 1.0 # baseline is au (hartree)
+        self._length_unit = 1.0 # baseline is au (bohr)
         self._angle_unit = 1.0 # baseline is radians
         fchk_file = open(path_to_fchk,'r').readlines()
         self._coordinate_list = []
@@ -64,22 +64,28 @@ class SeminarioMethod:
             self._energy_unit = 2625.5002
         elif unit.lower() == "kcal/mol":
             self._energy_unit = 627.509608030593
+        elif unit.lower() == "hartree" or unit.lower() == "au":\
+            self._energy_unit = 1.0
         else:
-            print("Given unit not recognized")
+            raise ValueError("Given unit not recognized")
             
     def set_length_unit(self, unit):
         if unit.lower() == "nm":
             self._length_unit = 0.0529177249
         elif unit.lower() == "angstrom" or unit.lower() == "å":
             self._length_unit = 0.529177249
+        elif unit.lower() == "bohr" or unit.lower() == "au":
+            self._length_unit = 1.0
         else:
-            print("Given unit not recognized")
+            raise ValueError("Given unit not recognized")
             
     def set_angle_unit(self, unit):
         if unit.lower() == "degrees" or unit.lower() == "degree":
             self._angle_unit = 57.2957795
+        elif unit.lower() == "radians" or unit.lower() == "radian":
+            self._angle_unit = 1.0
         else:
-            print("Given unit not recognized")
+            Raise ValueError("Given unit not recognized")
             
     def _calc_normal_distance_vector(self, atom_idx_A, atom_idx_B):
         return (self.coordinates[atom_idx_A,:]-self.coordinates[atom_idx_B,:])/np.linalg.norm(self.coordinates[atom_idx_A,:]-self.coordinates[atom_idx_B,:])

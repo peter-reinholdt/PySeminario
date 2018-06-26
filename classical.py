@@ -49,3 +49,10 @@ class classical(object):
                 hessian[i_atom*3+i_cart] = ((force_plus - force_minus) / (2*DELTA)).flat[:]
         return hessian
 
+    def get_mass_weighted_hessian(self):
+        hessian = self.get_hessian()
+        M = np.zeros(hessian.shape)
+        for atom in self.top.atoms:
+            for i in range(3):
+                M[atom.idx*3+i, atom.idx*3+i] = 1.0/np.sqrt(atom.mass)
+        return M @ hessian @ M

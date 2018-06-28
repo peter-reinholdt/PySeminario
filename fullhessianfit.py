@@ -1,11 +1,11 @@
 import numpy as np
 from scipy import optimize
 from functools import partial
-from fullhessian_generated import radius_first_derivative, radius_second_derivative, theta_first_derivative, theta_second_derivative
+from fullhessian_generated import radius_first_derivative, radius_second_derivative, theta_first_derivative, theta_second_derivative, phi_first_derivative, phi_second_derivative
 
 
 class FullHessianFit:
-    def __init__(self, path_to_fchk, bond_idx=[], angle_idx=[], dihedral_idx=[], dihedral_n=[]):
+    def __init__(self, path_to_fchk, bond_idx=[], angle_idx=[], dihedral_idx=[], dihedral_n=[]), improper_idx=[]):
         """
         """
         self._energy_unit = 1.0 # baseline is au
@@ -60,8 +60,9 @@ class FullHessianFit:
         self.angle_idx    = angle_idx
         self.dihedral_idx = dihedral_idx
         self.dihedral_n   = dihedral_n
-        self.mm_hessians = np.zeros((len(self.bond_idx)+len(self.angle_idx)+len(self.dihedral_idx), self.number_atoms*3, self.number_atoms*3))
-        self.mm_gradients = np.zeros((len(self.bond_idx)+len(self.angle_idx)+len(self.dihedral_idx), self.number_atoms*3))
+        self.improper_idx = improper_idx
+        self.mm_hessians = np.zeros((len(self.bond_idx)+len(self.angle_idx)+len(self.dihedral_idx)+len(self.improper_idx), self.number_atoms*3, self.number_atoms*3))
+        self.mm_gradients = np.zeros((len(self.bond_idx)+len(self.angle_idx)+len(self.dihedral_idx)+len(self.improper_idx), self.number_atoms*3))
         
     def _build_mm_hessians(self):
         counter = 0
@@ -225,7 +226,7 @@ class FullHessianFit:
         
         n_idx = 0
         for idx in self.dihedral_idx:
-            n = dihedral_n[n_idx]
+            n = self.dihedral_n[n_idx]
             n_idx += 1
             phase = self._calc_phase(idx[0], idx[1], idx[2], idx[3], n)
             x1,y1,z1 = self.coordinates[idx[0],:]
@@ -409,6 +410,193 @@ class FullHessianFit:
             self.mm_hessians[counter, 3*idx[3]+1, 3*idx[3]+2] = self._dihedral_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"y4","z4")
             self.mm_hessians[counter, 3*idx[3]+2, 3*idx[3]+2] = self._dihedral_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"z4","z4")
     
+            counter += 1
+    
+        for idx in self.improper_idx:
+            x1,y1,z1 = self.coordinates[idx[0],:]
+            x2,y2,z2 = self.coordinates[idx[1],:]
+            x3,y3,z3 = self.coordinates[idx[2],:]
+            x4,y4,z4 = self.coordinates[idx[3],:]
+            phi0 = self._phi(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4)
+    
+            # d_coord_0, d_coord_0
+            self.mm_hessians[counter, 3*idx[0],   3*idx[0]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x1","x1")
+            self.mm_hessians[counter, 3*idx[0]+1, 3*idx[0]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y1","x1")
+            self.mm_hessians[counter, 3*idx[0]+2, 3*idx[0]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z1","x1")
+            self.mm_hessians[counter, 3*idx[0],   3*idx[0]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x1","y1")
+            self.mm_hessians[counter, 3*idx[0]+1, 3*idx[0]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y1","y1")
+            self.mm_hessians[counter, 3*idx[0]+2, 3*idx[0]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z1","y1")
+            self.mm_hessians[counter, 3*idx[0],   3*idx[0]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x1","z1")
+            self.mm_hessians[counter, 3*idx[0]+1, 3*idx[0]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y1","z1")
+            self.mm_hessians[counter, 3*idx[0]+2, 3*idx[0]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z1","z1")
+            
+            # d_coord_0, d_coord_1
+            self.mm_hessians[counter, 3*idx[0],   3*idx[1]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x1","x2")
+            self.mm_hessians[counter, 3*idx[0]+1, 3*idx[1]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y1","x2")
+            self.mm_hessians[counter, 3*idx[0]+2, 3*idx[1]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z1","x2")
+            self.mm_hessians[counter, 3*idx[0],   3*idx[1]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x1","y2")
+            self.mm_hessians[counter, 3*idx[0]+1, 3*idx[1]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y1","y2")
+            self.mm_hessians[counter, 3*idx[0]+2, 3*idx[1]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z1","y2")
+            self.mm_hessians[counter, 3*idx[0],   3*idx[1]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x1","z2")
+            self.mm_hessians[counter, 3*idx[0]+1, 3*idx[1]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y1","z2")
+            self.mm_hessians[counter, 3*idx[0]+2, 3*idx[1]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z1","z2")
+            
+            # d_coord_0, d_coord_2
+            self.mm_hessians[counter, 3*idx[0],   3*idx[2]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x1","x3")
+            self.mm_hessians[counter, 3*idx[0]+1, 3*idx[2]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y1","x3")
+            self.mm_hessians[counter, 3*idx[0]+2, 3*idx[2]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z1","x3")
+            self.mm_hessians[counter, 3*idx[0],   3*idx[2]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x1","y3")
+            self.mm_hessians[counter, 3*idx[0]+1, 3*idx[2]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y1","y3")
+            self.mm_hessians[counter, 3*idx[0]+2, 3*idx[2]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z1","y3")
+            self.mm_hessians[counter, 3*idx[0],   3*idx[2]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x1","z3")
+            self.mm_hessians[counter, 3*idx[0]+1, 3*idx[2]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y1","z3")
+            self.mm_hessians[counter, 3*idx[0]+2, 3*idx[2]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z1","z3")
+            
+            # d_coord_0, d_coord_3
+            self.mm_hessians[counter, 3*idx[0],   3*idx[3]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x1","x4")
+            self.mm_hessians[counter, 3*idx[0]+1, 3*idx[3]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y1","x4")
+            self.mm_hessians[counter, 3*idx[0]+2, 3*idx[3]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z1","x4")
+            self.mm_hessians[counter, 3*idx[0],   3*idx[3]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x1","y4")
+            self.mm_hessians[counter, 3*idx[0]+1, 3*idx[3]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y1","y4")
+            self.mm_hessians[counter, 3*idx[0]+2, 3*idx[3]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z1","y4")
+            self.mm_hessians[counter, 3*idx[0],   3*idx[3]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x1","z4")
+            self.mm_hessians[counter, 3*idx[0]+1, 3*idx[3]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y1","z4")
+            self.mm_hessians[counter, 3*idx[0]+2, 3*idx[3]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z1","z4")
+            
+            # d_coord_1, d_coord_0
+            self.mm_hessians[counter, 3*idx[1],   3*idx[0]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x2","x1")
+            self.mm_hessians[counter, 3*idx[1]+1, 3*idx[0]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y2","x1")
+            self.mm_hessians[counter, 3*idx[1]+2, 3*idx[0]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z2","x1")
+            self.mm_hessians[counter, 3*idx[1],   3*idx[0]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x2","y1")
+            self.mm_hessians[counter, 3*idx[1]+1, 3*idx[0]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y2","y1")
+            self.mm_hessians[counter, 3*idx[1]+2, 3*idx[0]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z2","y1")
+            self.mm_hessians[counter, 3*idx[1],   3*idx[0]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x2","z1")
+            self.mm_hessians[counter, 3*idx[1]+1, 3*idx[0]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y2","z1")
+            self.mm_hessians[counter, 3*idx[1]+2, 3*idx[0]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z2","z1")
+            
+            # d_coord_1, d_coord_1
+            self.mm_hessians[counter, 3*idx[1],   3*idx[1]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x2","x2")
+            self.mm_hessians[counter, 3*idx[1]+1, 3*idx[1]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y2","x2")
+            self.mm_hessians[counter, 3*idx[1]+2, 3*idx[1]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z2","x2")
+            self.mm_hessians[counter, 3*idx[1],   3*idx[1]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x2","y2")
+            self.mm_hessians[counter, 3*idx[1]+1, 3*idx[1]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y2","y2")
+            self.mm_hessians[counter, 3*idx[1]+2, 3*idx[1]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z2","y2")
+            self.mm_hessians[counter, 3*idx[1],   3*idx[1]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x2","z2")
+            self.mm_hessians[counter, 3*idx[1]+1, 3*idx[1]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y2","z2")
+            self.mm_hessians[counter, 3*idx[1]+2, 3*idx[1]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z2","z2")
+            
+            # d_coord_1, d_coord_2
+            self.mm_hessians[counter, 3*idx[1],   3*idx[2]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x2","x3")
+            self.mm_hessians[counter, 3*idx[1]+1, 3*idx[2]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y2","x3")
+            self.mm_hessians[counter, 3*idx[1]+2, 3*idx[2]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z2","x3")
+            self.mm_hessians[counter, 3*idx[1],   3*idx[2]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x2","y3")
+            self.mm_hessians[counter, 3*idx[1]+1, 3*idx[2]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y2","y3")
+            self.mm_hessians[counter, 3*idx[1]+2, 3*idx[2]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z2","y3")
+            self.mm_hessians[counter, 3*idx[1],   3*idx[2]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x2","z3")
+            self.mm_hessians[counter, 3*idx[1]+1, 3*idx[2]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y2","z3")
+            self.mm_hessians[counter, 3*idx[1]+2, 3*idx[2]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z2","z3")
+            
+            # d_coord_1, d_coord_3
+            self.mm_hessians[counter, 3*idx[1],   3*idx[3]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x2","x4")
+            self.mm_hessians[counter, 3*idx[1]+1, 3*idx[3]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y2","x4")
+            self.mm_hessians[counter, 3*idx[1]+2, 3*idx[3]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z2","x4")
+            self.mm_hessians[counter, 3*idx[1],   3*idx[3]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x2","y4")
+            self.mm_hessians[counter, 3*idx[1]+1, 3*idx[3]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y2","y4")
+            self.mm_hessians[counter, 3*idx[1]+2, 3*idx[3]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z2","y4")
+            self.mm_hessians[counter, 3*idx[1],   3*idx[3]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x2","z4")
+            self.mm_hessians[counter, 3*idx[1]+1, 3*idx[3]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y2","z4")
+            self.mm_hessians[counter, 3*idx[1]+2, 3*idx[3]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z2","z4")
+            
+            # d_coord_2, d_coord_0
+            self.mm_hessians[counter, 3*idx[2],   3*idx[0]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x3","x1")
+            self.mm_hessians[counter, 3*idx[2]+1, 3*idx[0]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y3","x1")
+            self.mm_hessians[counter, 3*idx[2]+2, 3*idx[0]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z3","x1")
+            self.mm_hessians[counter, 3*idx[2],   3*idx[0]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x3","y1")
+            self.mm_hessians[counter, 3*idx[2]+1, 3*idx[0]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y3","y1")
+            self.mm_hessians[counter, 3*idx[2]+2, 3*idx[0]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z3","y1")
+            self.mm_hessians[counter, 3*idx[2],   3*idx[0]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x3","z1")
+            self.mm_hessians[counter, 3*idx[2]+1, 3*idx[0]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y3","z1")
+            self.mm_hessians[counter, 3*idx[2]+2, 3*idx[0]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z3","z1")
+            
+            # d_coord_2, d_coord_1
+            self.mm_hessians[counter, 3*idx[2],   3*idx[1]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x3","x2")
+            self.mm_hessians[counter, 3*idx[2]+1, 3*idx[1]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y3","x2")
+            self.mm_hessians[counter, 3*idx[2]+2, 3*idx[1]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z3","x2")
+            self.mm_hessians[counter, 3*idx[2],   3*idx[1]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x3","y2")
+            self.mm_hessians[counter, 3*idx[2]+1, 3*idx[1]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y3","y2")
+            self.mm_hessians[counter, 3*idx[2]+2, 3*idx[1]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z3","y2")
+            self.mm_hessians[counter, 3*idx[2],   3*idx[1]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x3","z2")
+            self.mm_hessians[counter, 3*idx[2]+1, 3*idx[1]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y3","z2")
+            self.mm_hessians[counter, 3*idx[2]+2, 3*idx[1]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z3","z2")
+            
+            # d_coord_2, d_coord_2
+            self.mm_hessians[counter, 3*idx[2],   3*idx[2]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x3","x3")
+            self.mm_hessians[counter, 3*idx[2]+1, 3*idx[2]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y3","x3")
+            self.mm_hessians[counter, 3*idx[2]+2, 3*idx[2]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z3","x3")
+            self.mm_hessians[counter, 3*idx[2],   3*idx[2]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x3","y3")
+            self.mm_hessians[counter, 3*idx[2]+1, 3*idx[2]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y3","y3")
+            self.mm_hessians[counter, 3*idx[2]+2, 3*idx[2]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z3","y3")
+            self.mm_hessians[counter, 3*idx[2],   3*idx[2]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x3","z3")
+            self.mm_hessians[counter, 3*idx[2]+1, 3*idx[2]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y3","z3")
+            self.mm_hessians[counter, 3*idx[2]+2, 3*idx[2]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z3","z3")
+            
+            # d_coord_2, d_coord_3
+            self.mm_hessians[counter, 3*idx[2],   3*idx[3]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x3","x4")
+            self.mm_hessians[counter, 3*idx[2]+1, 3*idx[3]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y3","x4")
+            self.mm_hessians[counter, 3*idx[2]+2, 3*idx[3]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z3","x4")
+            self.mm_hessians[counter, 3*idx[2],   3*idx[3]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x3","y4")
+            self.mm_hessians[counter, 3*idx[2]+1, 3*idx[3]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y3","y4")
+            self.mm_hessians[counter, 3*idx[2]+2, 3*idx[3]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z3","y4")
+            self.mm_hessians[counter, 3*idx[2],   3*idx[3]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x3","z4")
+            self.mm_hessians[counter, 3*idx[2]+1, 3*idx[3]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y3","z4")
+            self.mm_hessians[counter, 3*idx[2]+2, 3*idx[3]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z3","z4")
+            
+            # d_coord_3, d_coord_0
+            self.mm_hessians[counter, 3*idx[3],   3*idx[0]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x4","x1")
+            self.mm_hessians[counter, 3*idx[3]+1, 3*idx[0]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y4","x1")
+            self.mm_hessians[counter, 3*idx[3]+2, 3*idx[0]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z4","x1")
+            self.mm_hessians[counter, 3*idx[3],   3*idx[0]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x4","y1")
+            self.mm_hessians[counter, 3*idx[3]+1, 3*idx[0]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y4","y1")
+            self.mm_hessians[counter, 3*idx[3]+2, 3*idx[0]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z4","y1")
+            self.mm_hessians[counter, 3*idx[3],   3*idx[0]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x4","z1")
+            self.mm_hessians[counter, 3*idx[3]+1, 3*idx[0]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y4","z1")
+            self.mm_hessians[counter, 3*idx[3]+2, 3*idx[0]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z4","z1")
+            
+            # d_coord_3, d_coord_1
+            self.mm_hessians[counter, 3*idx[3],   3*idx[1]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x4","x2")
+            self.mm_hessians[counter, 3*idx[3]+1, 3*idx[1]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y4","x2")
+            self.mm_hessians[counter, 3*idx[3]+2, 3*idx[1]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z4","x2")
+            self.mm_hessians[counter, 3*idx[3],   3*idx[1]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x4","y2")
+            self.mm_hessians[counter, 3*idx[3]+1, 3*idx[1]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y4","y2")
+            self.mm_hessians[counter, 3*idx[3]+2, 3*idx[1]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z4","y2")
+            self.mm_hessians[counter, 3*idx[3],   3*idx[1]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x4","z2")
+            self.mm_hessians[counter, 3*idx[3]+1, 3*idx[1]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y4","z2")
+            self.mm_hessians[counter, 3*idx[3]+2, 3*idx[1]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z4","z2")
+            
+            # d_coord_3, d_coord_2
+            self.mm_hessians[counter, 3*idx[3],   3*idx[2]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x4","x3")
+            self.mm_hessians[counter, 3*idx[3]+1, 3*idx[2]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y4","x3")
+            self.mm_hessians[counter, 3*idx[3]+2, 3*idx[2]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z4","x3")
+            self.mm_hessians[counter, 3*idx[3],   3*idx[2]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x4","y3")
+            self.mm_hessians[counter, 3*idx[3]+1, 3*idx[2]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y4","y3")
+            self.mm_hessians[counter, 3*idx[3]+2, 3*idx[2]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z4","y3")
+            self.mm_hessians[counter, 3*idx[3],   3*idx[2]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x4","z3")
+            self.mm_hessians[counter, 3*idx[3]+1, 3*idx[2]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y4","z3")
+            self.mm_hessians[counter, 3*idx[3]+2, 3*idx[2]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z4","z3")
+            
+            # d_coord_3, d_coord_3
+            self.mm_hessians[counter, 3*idx[3],   3*idx[3]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x4","x4")
+            self.mm_hessians[counter, 3*idx[3]+1, 3*idx[3]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y4","x4")
+            self.mm_hessians[counter, 3*idx[3]+2, 3*idx[3]]   = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z4","x4")
+            self.mm_hessians[counter, 3*idx[3],   3*idx[3]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x4","y4")
+            self.mm_hessians[counter, 3*idx[3]+1, 3*idx[3]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y4","y4")
+            self.mm_hessians[counter, 3*idx[3]+2, 3*idx[3]+1] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z4","y4")
+            self.mm_hessians[counter, 3*idx[3],   3*idx[3]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x4","z4")
+            self.mm_hessians[counter, 3*idx[3]+1, 3*idx[3]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y4","z4")
+            self.mm_hessians[counter, 3*idx[3]+2, 3*idx[3]+2] = self._improper_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z4","z4")
+    
+            counter += 1
+        
     
     def _build_mm_gradients(self):
         # No use for this since it is zero by definition
@@ -464,24 +652,53 @@ class FullHessianFit:
             x4,y4,z4 = self.coordinates[idx[3],:]
             
             # d_coord_0
-            self.mm_gradients[counter, 3*idx[0]]   = self._angle_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"x1")
-            self.mm_gradients[counter, 3*idx[0]+1] = self._angle_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"y1")
-            self.mm_gradients[counter, 3*idx[0]+2] = self._angle_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"z1")
+            self.mm_gradients[counter, 3*idx[0]]   = self._dihedral_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"x1")
+            self.mm_gradients[counter, 3*idx[0]+1] = self._dihedral_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"y1")
+            self.mm_gradients[counter, 3*idx[0]+2] = self._dihedral_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"z1")
             
             # d_coord_1
-            self.mm_gradients[counter, 3*idx[1]]   = self._angle_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"x2")
-            self.mm_gradients[counter, 3*idx[1]+1] = self._angle_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"y2")
-            self.mm_gradients[counter, 3*idx[1]+2] = self._angle_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"z2")
+            self.mm_gradients[counter, 3*idx[1]]   = self._dihedral_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"x2")
+            self.mm_gradients[counter, 3*idx[1]+1] = self._dihedral_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"y2")
+            self.mm_gradients[counter, 3*idx[1]+2] = self._dihedral_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"z2")
             
             # d_coord_2
-            self.mm_gradients[counter, 3*idx[2]]   = self._angle_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"x3")
-            self.mm_gradients[counter, 3*idx[2]+1] = self._angle_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"y3")
-            self.mm_gradients[counter, 3*idx[2]+2] = self._angle_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"z3")
+            self.mm_gradients[counter, 3*idx[2]]   = self._dihedral_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"x3")
+            self.mm_gradients[counter, 3*idx[2]+1] = self._dihedral_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"y3")
+            self.mm_gradients[counter, 3*idx[2]+2] = self._dihedral_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"z3")
             
             # d_coord_3
-            self.mm_gradients[counter, 3*idx[3]]   = self._angle_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"x4")
-            self.mm_gradients[counter, 3*idx[3]+1] = self._angle_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"y4")
-            self.mm_gradients[counter, 3*idx[3]+2] = self._angle_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"z4")
+            self.mm_gradients[counter, 3*idx[3]]   = self._dihedral_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"x4")
+            self.mm_gradients[counter, 3*idx[3]+1] = self._dihedral_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"y4")
+            self.mm_gradients[counter, 3*idx[3]+2] = self._dihedral_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,"z4")
+            
+            counter += 1
+            
+        for idx in self.dihedral_idx:
+            x1,y1,z1 = self.coordinates[idx[0],:]
+            x2,y2,z2 = self.coordinates[idx[1],:]
+            x3,y3,z3 = self.coordinates[idx[2],:]
+            x4,y4,z4 = self.coordinates[idx[3],:]
+            phi0 = self._phi(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4)
+            
+            # d_coord_0
+            self.mm_gradients[counter, 3*idx[0]]   = self._improper_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x1")
+            self.mm_gradients[counter, 3*idx[0]+1] = self._improper_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y1")
+            self.mm_gradients[counter, 3*idx[0]+2] = self._improper_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z1")
+            
+            # d_coord_1
+            self.mm_gradients[counter, 3*idx[1]]   = self._improper_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x2")
+            self.mm_gradients[counter, 3*idx[1]+1] = self._improper_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y2")
+            self.mm_gradients[counter, 3*idx[1]+2] = self._improper_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z2")
+            
+            # d_coord_2
+            self.mm_gradients[counter, 3*idx[2]]   = self._improper_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x3")
+            self.mm_gradients[counter, 3*idx[2]+1] = self._improper_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y3")
+            self.mm_gradients[counter, 3*idx[2]+2] = self._improper_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z3")
+            
+            # d_coord_3
+            self.mm_gradients[counter, 3*idx[3]]   = self._improper_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"x4")
+            self.mm_gradients[counter, 3*idx[3]+1] = self._improper_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"y4")
+            self.mm_gradients[counter, 3*idx[3]+2] = self._improper_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,"z4")
             
             counter += 1
             
@@ -549,6 +766,11 @@ class FullHessianFit:
         return -n**phi_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,d1)*np.sin(n*self._phi(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4) + phase)
     
     
+    def _improper_first_derivative(self,x1,y1,z1,x2,y2,z2,x3,y3,z3,phia0,d1):
+        # zero per definition. LOL!
+        return (self._phi(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4) - phi0)*phi_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,d1)
+    
+    
     def _bond_second_derivative(self,x1,y1,z1,x2,y2,z2,r0,d1,d2):
         output = radius_first_derivative(x1,y1,z1,x2,y2,z2,d1)*radius_first_derivative(x1,y1,z1,x2,y2,z2,d2)
         return output + (self._radius(x1,y1,z1,x2,y2,z2) - r0)*radius_second_derivative(x1,y1,z1,x2,y2,z2,d1,d2)
@@ -562,7 +784,13 @@ class FullHessianFit:
     def _dihedral_second_derivative(self,x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,d1,d2):
         output  = -n*phi_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,d1,d2)*np.sin(n*self._phi(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4) + phase)
         output += -n*n*phi_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,d1)*phi_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,d2)*np.cos(n*self._phi(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4) + phase)
-
+        return output
+        
+        
+    def _improper_second_derivative(self,x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,d1,d2):
+        output = phi_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,d1)*phi_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,d2)
+        return output + (self._phi(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4) - phi0)*phi_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,d1,d2)
+        
         
     def set_energy_unit(self, unit):
         if unit.lower() == "kj/mol":
@@ -632,6 +860,13 @@ class FullHessianFit:
         return np.array(dihedral_constants)*self._energy_unit/(self._angle_unit**2)
 
     
+    def get_improper_constants(self):
+        improper_constants = []
+        for i in range(len(self.bond_idx)+len(self.angle_idx)+len(self.dihedral_idx), len(self.bond_idx)+len(self.angle_idx)+len(self.dihedral_idx)+len(self.improper_idx)):
+            improper_constants.append(self.fitted_ouput["x"][i])
+        return np.array(improper_constants)*self._energy_unit/(self._angle_unit**2)
+    
+    
     def get_bond_length(self):
         bond_lengths = []
         for idx in self.bond_idx:
@@ -647,7 +882,21 @@ class FullHessianFit:
     
     
     def get_dihedral(self):
+        """Returns the phase factor of the dihedral angle"""
         bond_dihedral = []
+        n_idx = 0
         for idx in self.dihedral_idx:
-            bond_dihedral.append(self._calc_dihedral(idx[0], idx[1], idx[2], idx[3]))
+            bond_dihedral.append(self._calc_phase(idx[0], idx[1], idx[2], idx[3], self.dihedral_n[n_idx]))
+            n_idx += 1
         return np.array(bond_dihedral) * self._angle_unit
+    
+    
+    def get_improper(self):
+        bond_improper = []
+        for idx in self.improper_idx:
+            x1,y1,z1 = self.coordinates[idx[0],:]
+            x2,y2,z2 = self.coordinates[idx[1],:]
+            x3,y3,z3 = self.coordinates[idx[2],:]
+            x4,y4,z4 = self.coordinates[idx[3],:]
+            bond_improper.append(self._phi(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4))
+        return np.array(bond_improper) * self._angle_unit

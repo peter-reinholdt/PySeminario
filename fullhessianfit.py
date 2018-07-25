@@ -836,34 +836,34 @@ class FullHessianFit:
         self._build_mm_hessians()
         #self._build_mm_gradients(), zero by definition
         baked_hessian_error = partial(Hessian_error, hessians=self.mm_hessians, target_hessian=self.hessian_target)     
-        self.fitted_ouput = optimize.minimize(baked_hessian_error, [1,1,1])
+        self.fitted_output = optimize.minimize(baked_hessian_error, [1,1,1])
         
         
     def get_bond_constants(self):
         bond_constants = []
         for i in range(0, len(self.bond_idx)):
-            bond_constants.append(self.fitted_ouput["x"][i])
+            bond_constants.append(self.fitted_output["x"][i])
         return np.array(bond_constants)*self._energy_unit/(self._length_unit**2)
     
     
     def get_angle_constants(self):
         angle_constants = []
         for i in range(len(self.bond_idx), len(self.bond_idx)+len(self.angle_idx)):
-            angle_constants.append(self.fitted_ouput["x"][i])
+            angle_constants.append(self.fitted_output["x"][i])
         return np.array(angle_constants)*self._energy_unit/(self._angle_unit**2)
     
     
     def get_dihedral_constants(self):
         dihedral_constants = []
         for i in range(len(self.bond_idx)+len(self.angle_idx), len(self.bond_idx)+len(self.angle_idx)+len(self.dihedral_idx)):
-            dihedral_constants.append(self.fitted_ouput["x"][i])
+            dihedral_constants.append(self.fitted_output["x"][i])
         return np.array(dihedral_constants)*self._energy_unit/(self._angle_unit**2)
 
     
     def get_improper_constants(self):
         improper_constants = []
         for i in range(len(self.bond_idx)+len(self.angle_idx)+len(self.dihedral_idx), len(self.bond_idx)+len(self.angle_idx)+len(self.dihedral_idx)+len(self.improper_idx)):
-            improper_constants.append(self.fitted_ouput["x"][i])
+            improper_constants.append(self.fitted_output["x"][i])
         return np.array(improper_constants)*self._energy_unit/(self._angle_unit**2)
     
     

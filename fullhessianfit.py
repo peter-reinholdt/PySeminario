@@ -835,8 +835,9 @@ class FullHessianFit:
         
         self._build_mm_hessians()
         #self._build_mm_gradients(), zero by definition
-        baked_hessian_error = partial(Hessian_error, hessians=self.mm_hessians, target_hessian=self.hessian_target)     
-        self.fitted_output = optimize.minimize(baked_hessian_error, [1,1,1])
+        baked_hessian_error = partial(Hessian_error, hessians=self.mm_hessians, target_hessian=self.hessian_target)
+        initial_guess = [1]*len(self.mm_hessians)
+        self.fitted_output = optimize.minimize(baked_hessian_error, initial_guess)
         
         
     def get_bond_constants(self):

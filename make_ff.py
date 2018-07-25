@@ -17,19 +17,21 @@ parser.add_argument('--fchk', dest='fchk', type=str, required=True,
         help='Name of formatted checkpoint file to put into output .itp')
 
 parser.add_argument('--parameter-type', dest='parmtype', default="seminario", 
-        help='Parameter type to use. Options are: seminario, seminario_modified, hessian_fit')
+        help='Parameter type to use',
+        choices=['seminario', 'seminario_modified', 'hessian_fit'])
 
 parser.add_argument('--output-parms',  type=str, dest="output_parms", nargs="+", default=["bonds", "angles", "dihedrals"], 
                     help='Which parameters to calculate from the hessian.')
+
 
 args = parser.parse_args()
 itp = parmed.load_file(args.itp)
 bond_indices, angle_indices, dihedral_indices, improper_indices, dihedral_multiplicities, bond_symmetries, angle_symmetries, dihedral_symmetries = get_indices(args.itp)
 
 
-if args.parmtype.lower() == 'seminario':
+if args.parmtype.lower() == 'seminario' or args.parmtype.lower() == "seminario_modified":
+    #only the angle term is different
     Seminario = SeminarioMethod(args.fchk)
-    #make sure this is appropriate
     Seminario.set_energy_unit('kcal/mol')
     Seminario.set_length_unit('angstrom')
     Seminario.set_angle_unit('degree')
@@ -53,9 +55,18 @@ if args.parmtype.lower() == 'seminario':
     if 'angles' in args.output_parms:
         angles_b = []
         angles_k = []
-        for angle_idx in angle_indices:
-            angles_b.append(Seminario.get_angle(*angle_idx))
-            angles_k.append(Seminario.get_angle_constant(*angle_idx))
+        if args.parmtype.lower() == 'seminario':
+            for angle_idx in angle_indices:
+                Seminario.set_angle_unit('degree')
+                angles_b.append(Seminario.get_angle(*angle_idx))
+                Seminario.set_angle_unit('radian')
+                angles_k.append(Seminario.get_angle_constant(*angle_idx))
+        elif args.parmtype.lower() == 'seminario_modified':
+            Seminario.set_angle_unit('degree')
+            for angle_idx in angle_indices:
+                angles_b.append(Seminario.get_angle(*angle_idx))
+            Seminario.set_angle_unit('radian')
+            angles_k = Seminario.get_modified_angle_constant(angle_indices)
         #update itp (taking into account equivalent bond terms)
         for index, angle_type in enumerate(itp.angle_types):
            k = 0.0
@@ -75,4 +86,4 @@ elif args.parmtype.lower() == 'seminario_modified':
 elif args.parmtype.lower() == 'hessian_fit':
     pass
 
-itp.save(args.out)
+itp.save(args.out, overwrite=True)

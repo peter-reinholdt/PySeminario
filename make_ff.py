@@ -24,7 +24,7 @@ parser.add_argument('--parameter-type', dest='parmtype', default="seminario",
 
 args = parser.parse_args()
 itp = parmed.load_file(args.itp)
-bond_indices, angle_indices, dihedral_indices, improper_indices, dihedral_multiplicities, bond_symmetries, angle_symmetries, dihedral_symmetries = get_indices(args.itp)
+bond_indices, angle_indices, dihedral_indices, improper_indices, dihedral_multiplicities, bond_symmetries, angle_symmetries, dihedral_symmetries, dihedral_types = get_indices(args.itp)
 
 
 if args.parmtype.lower() == 'seminario' or args.parmtype.lower() == "seminario_modified":
@@ -85,11 +85,31 @@ elif args.parmtype.lower() == 'hessian_fit':
     angles_k = HessianFit.get_angle_constants()
     dihedrals_k = HessianFit.get_dihedral_constants()
     impropers_k = HessianFit.get_improper_constants()
+
     HessianFit.set_angle_unit('degree')
     bonds_b = HessianFit.get_bond_length()
     angles_b = HessianFit.get_angle()
     dihedrals_b = HessianFit.get_dihedral()
     impropers_b = HessianFit.get_improper()
+
+    #duplicate dihedrals / impropers into single list so it is easy to index
+    all_dihedrals_k = []
+    all_dihedrals_b = []
+    n_dh = 0
+    n_im = 0
+    for index, dihedral_type in enumerate(dihedral_types):
+        if dihedral_type == 1:
+            all_dihedrals_k.append(dihedrals_k[n_dh])
+            all_dihedrals_b.append(dihedrals_b[n_dh])
+            n_dh += 1
+        elif dihedral_type == 4:
+            all_dihedrals_k.append(impropers_k[n_im])
+            all_dihedrals_b.append(impropers_b[n_im])
+            n_im += 1
+        else: 
+            raise NotImplementedError('Dihedral type is not supported')
+
+
 
     for index, bond_type in enumerate(itp.bond_types):
         k = 0.0
@@ -111,5 +131,16 @@ elif args.parmtype.lower() == 'hessian_fit':
         theteq = theteq / len(angle_symmetries[index])
         angle_type.k = k
         angle_type.theteq = theteq
+    for index, dihedral_type in enumerate(itp.dihedral_types):
+        phi_k = 0.0
+        phase = 0.0
+        for equivalent in dihedral_symmetries[index]:
+            phi_k += all_dihedrals_k[equivalent]
+            phase += all_dihedrals_b[equivalent]
+        phi_k = phi_k / len(dihedral_symmetries[index])
+        phase = phase / len(dihedral_symmetries[index])
+        dihedral_type.phi_k = phi_k
+        dihedral_type.phase = phase
+        
 
 itp.save(args.out, overwrite=True)

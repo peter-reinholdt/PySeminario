@@ -4,7 +4,7 @@
 import parmed
 
 
-def parse_itp(itp_name):
+def get_indices(itp_name):
     itp = parmed.load_file(itp_name)
     #indices
     bond_indices = []

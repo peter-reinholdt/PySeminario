@@ -5,7 +5,7 @@ from fullhessian_generated import radius_first_derivative, radius_second_derivat
 
 
 class FullHessianFit:
-    def __init__(self, path_to_fchk, bond_idx=[], angle_idx=[], dihedral_idx=[], dihedral_n=[]), improper_idx=[]):
+    def __init__(self, path_to_fchk, bond_idx=[], angle_idx=[], dihedral_idx=[], dihedral_n=[], improper_idx=[]):
         """
         """
         self._energy_unit = 1.0 # baseline is au

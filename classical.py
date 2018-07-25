@@ -47,7 +47,9 @@ class classical(object):
                 force_minus = state.getForces(asNumpy=True).value_in_unit(unit.kilojoule_per_mole/unit.nanometer)
                 new_coordinates[i_atom, i_cart] = coordinates[i_atom, i_cart]
                 hessian[i_atom*3+i_cart] = ((force_plus - force_minus) / (2*DELTA)).flat[:]
-        return hessian
+        #hessian is second derivative of energy; force is *negative* of first derivative of energy...
+        #adjust sign accordingly
+        return -hessian
 
     def get_mass_weighted_hessian(self):
         hessian = self.get_hessian()

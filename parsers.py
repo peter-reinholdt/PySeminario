@@ -1,57 +1,59 @@
 #!/usr/bin/env python
 
 
+import parmed
+
+
 def parse_itp(itp_name):
-    with open(itp_name, "r") as f:
-        itp = f.readlines()
-    #parse itp and build of lists of bonds, angles, dihedrals and impropers
-    bonds = []
-    angles = []
-    dihedrals = []
+    itp = parmed.load_file(itp_name)
+    #indices
+    bond_indices = []
+    angle_indices = []
+    dihedral_indices = []
+    improper_indices = []
+    #equivalent parameters
+    bond_symmetries = []
+    angle_symmetries = []
+    dihedral_symmetries = []
+    #periodicities
     dihedral_multiplicities = []
-    impropers = []
-    for line in itp:
-        #what section are we in?
-        split = line.split()
-        if line[0] == ";":
-            pass
-        elif split == []:
-            pass
-        elif split[0] == "[" and split[2] == "]":
-            #new section
-            section_name  = split[1]
-        elif section_name == "bonds":
-            #itp is 1-indexed, but we are 0-indexed
-            ai = int(split[0]) - 1
-            aj = int(split[1]) - 1
-            function_type = int(split[2])
-            if function_type == 1:
-                bonds.append([ai, aj])
-            else:
-                raise NotImplementedError('Only works with harmonic bond type')
-        elif section_name == "angles":
-            ai = int(split[0]) - 1
-            aj = int(split[1]) - 1
-            ak = int(split[2]) - 1
-            function_type = int(split[3])
-            if function_type == 1:
-                angles.append([ai,aj,ak])
-            else:
-                raise NotImplementedError('Only works with harmonic angle type')
-        elif section_name == "dihedrals":
-            ai = int(split[0]) - 1
-            aj = int(split[1]) - 1
-            ak = int(split[2]) - 1
-            al = int(split[3]) - 1
-            function_type = int(split[4])
-            multiplicity  = int(split[7])
-            if function_type == 1:
-                dihedrals.append([ai,aj,ak,al])
-                dihedral_multiplicities.append(multiplicity)
-            elif function_type == 4:
-                impropers.append([ai,aj,ak,al])
-            else:
-                raise NotImplementedError('Only works diheral type 1 or 4')
+    for bond in itp.bonds:
+        if bond.funct == 1:
+            bond_indices.append([bond.atom1.idx, bond.atom2.idx])
         else:
-            pass
-    return bonds, angles, dihedrals, dihedral_multiplicities, impropers
+            raise NotImplementedError('Unknown bond function type')
+    for angle in itp.angles:
+        if angle.funct == 1:
+            angle_indices.append([angle.atom1.idx, angle.atom2.idx, angle.atom3.idx])
+        else:
+            raise NotImplementedError('Unknown angle function type')
+    for dihedral in itp.dihedrals:
+        if dihedral.funct == 1:
+            dihedral_indices.append([dihedral.atom1.idx, dihedral.atom2.idx, dihedral.atom3.idx])
+            dihedral_multiplicities.append([dihedral.type.per])
+        elif dihedral.funct == 4:
+            improper_indices.append([dihedral.atom1.idx, dihedral.atom2.idx, dihedral.atom3.idx])
+        else:
+            raise NotImplementedError('Unknown dihedral function type')
+    
+    for bond_type in itp.bond_types:
+        symmetry = []
+        for index, bond in enumerate(itp.bonds):
+            if bond.type == bond_type:
+                symmetry.append(index)
+        bond_symmetries.append(symmetry)
+
+    for angle_type in itp.angle_types:
+        symmetry = []
+        for index, angle in enumerate(itp.angles):
+            if angle.type == angle_type:
+                symmetry.append(index)
+        angle_symmetries.append(symmetry)
+
+    for dihedral_type in itp.dihedral_types:
+        symmetry = []
+        for index, dihedral in enumerate(itp.dihedrals):
+            if dihedral.type == dihedral_type:
+                symmetry.append(index)
+        dihedral_symmetries.append(symmetry)
+    return bond_indices, angle_indices, dihedral_indices, improper_indices, dihedral_multiplicities, bond_symmetries, angle_symmetries, dihedral_symmetries

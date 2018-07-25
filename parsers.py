@@ -29,10 +29,10 @@ def get_indices(itp_name):
             raise NotImplementedError('Unknown angle function type')
     for dihedral in itp.dihedrals:
         if dihedral.funct == 1:
-            dihedral_indices.append([dihedral.atom1.idx, dihedral.atom2.idx, dihedral.atom3.idx])
+            dihedral_indices.append([dihedral.atom1.idx, dihedral.atom2.idx, dihedral.atom3.idx, dihedral.atom4.idx])
             dihedral_multiplicities.append([dihedral.type.per])
         elif dihedral.funct == 4:
-            improper_indices.append([dihedral.atom1.idx, dihedral.atom2.idx, dihedral.atom3.idx])
+            improper_indices.append([dihedral.atom1.idx, dihedral.atom2.idx, dihedral.atom3.idx, dihedral.atom4.idx])
         else:
             raise NotImplementedError('Unknown dihedral function type')
     

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import numpy as np
+from numpy import sqrt
 from scipy import optimize
 from functools import partial
 from fullhessian_generated import radius_first_derivative, radius_second_derivative, theta_first_derivative, theta_second_derivative, phi_first_derivative, phi_second_derivative
@@ -749,7 +750,7 @@ class FullHessianFit:
         x12 = x0*x11 - x1*x7
         x13 = x1*x6 - x11*x2
         x14 = -x1*x9 + x2*x4
-        return np.atan2(-(x0*(-x10*x12 + x5*x8) + x1*(-x12*x14 + x13*x5) + x2*(x10*x13 - x14*x8))/sqrt(x0**2 + x1**2 + x2**2), x10*x8 + x12*x5 + x13*x14)
+        return np.arctan2(-(x0*(-x10*x12 + x5*x8) + x1*(-x12*x14 + x13*x5) + x2*(x10*x13 - x14*x8))/sqrt(x0**2 + x1**2 + x2**2), x10*x8 + x12*x5 + x13*x14)
         
     
     def _bond_first_derivative(self,x1,y1,z1,x2,y2,z2,r0,d1):

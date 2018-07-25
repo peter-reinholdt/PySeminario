@@ -15,8 +15,9 @@ def get_indices(itp_name):
     bond_symmetries = []
     angle_symmetries = []
     dihedral_symmetries = []
-    #periodicities
+    #other stuff
     dihedral_multiplicities = []
+    dihedral_types = []
     for bond in itp.bonds:
         if bond.funct == 1:
             bond_indices.append([bond.atom1.idx, bond.atom2.idx])
@@ -28,6 +29,7 @@ def get_indices(itp_name):
         else:
             raise NotImplementedError('Unknown angle function type')
     for dihedral in itp.dihedrals:
+        dihedral_types.append(dihedral.funct)
         if dihedral.funct == 1:
             dihedral_indices.append([dihedral.atom1.idx, dihedral.atom2.idx, dihedral.atom3.idx, dihedral.atom4.idx])
             dihedral_multiplicities.append(dihedral.type.per)
@@ -56,4 +58,4 @@ def get_indices(itp_name):
             if dihedral.type == dihedral_type:
                 symmetry.append(index)
         dihedral_symmetries.append(symmetry)
-    return bond_indices, angle_indices, dihedral_indices, improper_indices, dihedral_multiplicities, bond_symmetries, angle_symmetries, dihedral_symmetries
+    return bond_indices, angle_indices, dihedral_indices, improper_indices, dihedral_multiplicities, bond_symmetries, angle_symmetries, dihedral_symmetries, dihedral_types 

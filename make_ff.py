@@ -110,7 +110,6 @@ elif args.parmtype.lower() == 'hessian_fit':
             raise NotImplementedError('Dihedral type is not supported')
 
 
-
     for index, bond_type in enumerate(itp.bond_types):
         k = 0.0
         req = 0.0
@@ -138,7 +137,7 @@ elif args.parmtype.lower() == 'hessian_fit':
             phi_k += all_dihedrals_k[equivalent]
             phase += all_dihedrals_b[equivalent]
         phi_k = phi_k / len(dihedral_symmetries[index])
-        phase = phase / len(dihedral_symmetries[index])
+        phase = phase % (360.0 / dihedral_type.per)
         dihedral_type.phi_k = phi_k
         dihedral_type.phase = phase
         

@@ -76,7 +76,7 @@ if args.parmtype.lower() == 'seminario' or args.parmtype.lower() == "seminario_m
         angle_type.theteq = theteq
 
 elif args.parmtype.lower() == 'hessian_fit':
-    HessianFit = FullHessianFit(args.fchk, bond_indices, angle_indices, dihedral_multiplicities, improper_indices)
+    HessianFit = FullHessianFit(args.fchk, bond_indices, angle_indices, dihedral_indices, dihedral_multiplicities, improper_indices)
     HessianFit.fit_parameters()
     HessianFit.set_energy_unit('kcal/mol')
     HessianFit.set_length_unit('angstrom')

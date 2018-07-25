@@ -319,7 +319,7 @@ def theta_second_derivative(X1,Y1,Z1,X2,Y2,Z2,X3,Y3,Z3,d1,d2):
         print("theta_second_derivative not understood")
     return output
 
-def theta_second_derivative(X1,Y1,Z1,X2,Y2,Z2,X3,Y3,Z3,X4,Y4,Z4,d1,d2):
+def phi_second_derivative(X1,Y1,Z1,X2,Y2,Z2,X3,Y3,Z3,X4,Y4,Z4,d1,d2):
     output = 0.0
     if d1.upper() == "X1" and d2.upper() == "X1":
         output = phi_dX1_dX1(X1,Y1,Z1,X2,Y2,Z2,X3,Y3,Z3,X4,Y4,Z4)

@@ -100,7 +100,7 @@ genfile.write("    else:\n")
 genfile.write("        print(\"theta_second_derivative not understood\")\n")
 genfile.write("    return output\n\n")
 
-genfile.write("def theta_second_derivative(X1,Y1,Z1,X2,Y2,Z2,X3,Y3,Z3,X4,Y4,Z4,d1,d2):\n")
+genfile.write("def phi_second_derivative(X1,Y1,Z1,X2,Y2,Z2,X3,Y3,Z3,X4,Y4,Z4,d1,d2):\n")
 genfile.write("    output = 0.0\n")
 diff_var = [X1,Y1,Z1,X2,Y2,Z2,X3,Y3,Z3,X4,Y4,Z4]
 elif_check = 0

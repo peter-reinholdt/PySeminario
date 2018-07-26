@@ -10,6 +10,36 @@ from fullhessian_generated import radius_first_derivative, radius_second_derivat
 class FullHessianFit:
     def __init__(self, path_to_fchk, bond_idx=[], angle_idx=[], dihedral_idx=[], dihedral_n=[], improper_idx=[]):
         """
+        Class to fit forcefields parameters to a molecular cartesian Hessian.
+        
+        Input : path_to_fchk, the path to the fchk-file
+              : bond_idx= list of lists with bond indicies
+              : angle_idx= list of lists with angle indicies
+              : dihedral_idx= list of lists with dihedral indicies
+              : dihedral_n= list of multiplicity of the dihedrals
+              : improper_idx= list of lists with improper indicies
+        Indexing starts from 0 and not 1.
+              
+        The forcefield functions that will be fitted to is defined as:
+        
+        V_bond = 0.5*k*(r - r0)^2
+        V_angle = 0.5*k*(theta - theta0)^2
+        V_dihedral = k*(1+cos(n*phi - phi0))
+        V_improper = 0.5*k(phi - phi0)^2
+        
+        The bond is indexed as:
+            idx1-idx2
+            
+        The angle is indexed as:
+            idx1-idx2-idx3
+            
+        The dihedral is indexed as:
+            idx1-idx2-idx3-idx4
+            
+        The improper is indexed as:
+            idx2-idx1-idx3
+                  |
+                 idx4
         """
         self._energy_unit = 1.0 # baseline is au
         self._length_unit = 1.0 # baseline is au
@@ -646,7 +676,7 @@ class FullHessianFit:
         
         n_idx = 0
         for idx in self.dihedral_idx:
-            n = dihedral_n[n_idx]
+            n = self.dihedral_n[n_idx]
             n_idx += 1
             phase = self._calc_phase(idx[0], idx[1], idx[2], idx[3], n)
             x1,y1,z1 = self.coordinates[idx[0],:]
@@ -676,7 +706,7 @@ class FullHessianFit:
             
             counter += 1
             
-        for idx in self.dihedral_idx:
+        for idx in self.improper_idx:
             x1,y1,z1 = self.coordinates[idx[0],:]
             x2,y2,z2 = self.coordinates[idx[1],:]
             x3,y3,z3 = self.coordinates[idx[2],:]
@@ -707,11 +737,14 @@ class FullHessianFit:
             
     
     def _calc_phase(self, atom_idx_A, atom_idx_B, atom_idx_C, atom_idx_D, n):
+        """
+        Defined such that the first derivative of the dihedral is equal to zero.
+        """
         x1,y1,z1 = self.coordinates[atom_idx_A,:]
         x2,y2,z2 = self.coordinates[atom_idx_B,:]
         x3,y3,z3 = self.coordinates[atom_idx_C,:]
         x4,y4,z4 = self.coordinates[atom_idx_D,:]
-        return -n*self._phi(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4)
+        return n*self._phi(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4)
 
     
     def _calc_distance_vector(self, atom_idx_A, atom_idx_B):
@@ -766,10 +799,10 @@ class FullHessianFit:
     
     def _dihedral_first_derivative(self,x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,d1):
         # zero per definition. LOL!
-        return -n**phi_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,d1)*np.sin(n*self._phi(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4) + phase)
+        return -n**phi_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,d1)*np.sin(n*self._phi(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4) - phase)
     
     
-    def _improper_first_derivative(self,x1,y1,z1,x2,y2,z2,x3,y3,z3,phia0,d1):
+    def _improper_first_derivative(self,x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phi0,d1):
         # zero per definition. LOL!
         return (self._phi(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4) - phi0)*phi_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,d1)
     
@@ -785,8 +818,8 @@ class FullHessianFit:
    
 
     def _dihedral_second_derivative(self,x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,phase,n,d1,d2):
-        output  = -n*phi_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,d1,d2)*np.sin(n*self._phi(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4) + phase)
-        output += -n*n*phi_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,d1)*phi_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,d2)*np.cos(n*self._phi(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4) + phase)
+        output  = -n*phi_second_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,d1,d2)*np.sin(n*self._phi(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4) - phase)
+        output += -n*n*phi_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,d1)*phi_first_derivative(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4,d2)*np.cos(n*self._phi(x1,y1,z1,x2,y2,z2,x3,y3,z3,x4,y4,z4) - phase)
         return output
         
         

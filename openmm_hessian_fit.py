@@ -21,6 +21,7 @@ class openmmFullHessianFit:
         fchk_file = open(path_to_fchk,'r').readlines()
         self._coordinate_list = []
         self._hessian_list    = []
+        self._gradient_list   = []
         
         # Load in all needed stuff from fchk file
         for i in range(0, len(fchk_file)):
@@ -38,8 +39,14 @@ class openmmFullHessianFit:
                         # Hope this stop condition always works
                         break
                     self._hessian_list = self._hessian_list + fchk_file[j].split()
+            if "Cartesian Gradient" in fchk_file[i]:
+                for j in range(i+1, len(fchk_file)):
+                    if fchk_file[j][0:1] != " ":
+                        break
+                    self._gradient_list =  self._gradient_list + fchk_file[j].split()
         self.coordinates = np.zeros((self.number_atoms, 3))
         self.target_hessian = np.zeros((self.number_atoms*3, self.number_atoms*3))
+        self.target_gradient = np.array(self._gradient_list, dtype=np.float64).reshape(-1, 3)
         
         # Transform coordinate vector to array
         i, j = -1, 0
@@ -60,9 +67,17 @@ class openmmFullHessianFit:
             if i != j:
                 self.target_hessian[j,i] = self._hessian_list[idx]
             j += 1
+        conversion_factor =  2625.5002 / (parmed.unit.bohr.conversion_factor_to(parmed.unit.nanometer))**2
+        self.target_hessian *= conversion_factor
+        self.mw_target_hessian = classical.get_mass_weighted_hessian(self.target_hessian, self.topology)
+        self.target_eigenvalues, self.target_eigenvectors = np.linalg.eigh(self.mw_target_hessian)
+        self.target_gradient = self.target_gradient * 2625.5002 / (parmed.unit.bohr.conversion_factor_to(parmed.unit.nanometer))
+
 
 
     def fit_parameters(self, method='slsqp',
+            target='eigenvalues',
+            k_gradient = 1.0,
             fit_bonds_k=True, 
             fit_bonds_req=False, 
             fit_angles_k=True,
@@ -102,7 +117,7 @@ class openmmFullHessianFit:
                 loc +=1
                 x0.append(evaluator.top.dihedral_types[index].phase)
         
-        def cost_function(guess_vector, guess_vector_keys, evaluator, target_hessian):
+        def cost_function(guess_vector, guess_vector_keys, evaluator, target_eigenvalues, target_eigenvectors, target_gradient, k_gradient=k_gradient, target=target):
             #unpack guess vector into top
             for i, key in enumerate(guess_vector_keys):
                 if key[0] == "bond_k":
@@ -123,12 +138,42 @@ class openmmFullHessianFit:
             #calculate hessian with openmm
             hessian = evaluator.get_hessian()
             #evaluate RMSD         hartree / bohr**2
-            conversion_factor =  2625.5002 / (parmed.unit.bohr.conversion_factor_to(parmed.unit.nanometer))**2
-            res = np.sqrt(np.average((target_hessian*conversion_factor-hessian)**2))
+
+            mw_hessian = classical.get_mass_weighted_hessian(hessian, evaluator.top)
+            eigenvalues, eigenvectors = np.linalg.eigh(mw_hessian)
+            
+            def RMSD(a,b):
+                return np.sqrt(np.average((a-b)**2))
+
+            if target == 'eigenvalues':
+                res = RMSD(target_eigenvalues, eigenvalues)
+            elif target == 'eigenvectors':
+                res = RMSD(target_eigenvectors, eigenvectors)
+            elif target == 'frequencies':
+                mask = target_eigenvalues > 1e-1
+                target_freq = np.sqrt(target_eigenvalues[mask])
+                freq = np.sqrt(eigenvalues[mask])
+                res = RMSD(target_freq, freq)
+            elif target == 'frequency_weighted_eigenvectors':
+                #to filter out negative e.v. already in target 
+                mask = target_eigenvalues > 1e-1
+                target_freq = np.sqrt(target_eigenvalues)
+                freq = np.sqrt(eigenvalues)
+                res = 0.0
+                for i in range(mask.shape[0]):
+                    if mask[i]:
+                        res += np.average((target_freq[i] * target_eigenvectors[:,i] - freq[i] * eigenvectors[:,i])**2)
+                res = res / mask.sum()
+                res = np.sqrt(res)
+
+            else:
+                raise ValueError('Not a valid choice of target')
+            #                       gradient is minus force
+            res += k_gradient * RMSD(target_gradient, -1.0*evaluator.get_force())
             print(res)
             return res
 
-        fun = partial(cost_function, guess_vector_keys=guess_vector_keys, evaluator=evaluator, target_hessian=self.target_hessian) 
+        fun = partial(cost_function, guess_vector_keys=guess_vector_keys, evaluator=evaluator, target_eigenvalues=self.target_eigenvalues,
+                target_gradient=self.target_gradient, k_gradient=k_gradient, target_eigenvectors=self.target_eigenvectors) 
         self.res = optimize.minimize(fun, x0=x0, method=method) 
-
 

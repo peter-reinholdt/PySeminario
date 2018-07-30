@@ -56,3 +56,11 @@ class Evaluator(object):
         #adjust sign accordingly
         self.set_coordinates(coordinates)
         return -hessian
+
+
+def get_mass_weighted_hessian(hessian, top):
+    M = np.zeros(hessian.shape)
+    for atom in top.atoms:
+        for i in range(3):
+            M[atom.idx*3+i, atom.idx*3+i] = 1.0/np.sqrt(atom.mass)
+    return M @ hessian @ M

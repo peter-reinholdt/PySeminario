@@ -62,47 +62,61 @@ class openmmFullHessianFit:
             j += 1
 
 
-    def fit_parameters(self, method='slsqp'):
+    def fit_parameters(self, method='slsqp',
+            fit_bonds_k=True, 
+            fit_bonds_req=False, 
+            fit_angles_k=True,
+            fit_angles_theteq=False,
+            fit_dihedrals_phi_k=True,
+            fit_dihedrals_phase=False):
         #the openmm part works in (nanometer, kJ/mol) units
         evaluator = classical.Evaluator(self.topology, self.coordinates * parmed.unit.bohr.conversion_factor_to(parmed.unit.nanometer))
         guess_vector_keys = []
         x0 = []
         loc = 0
         for index in range(len(evaluator.top.bond_types)):
-            guess_vector_keys.append(("bond_k", index, loc))
-            loc +=1
-            x0.append(evaluator.top.bond_types[index].k)
-            guess_vector_keys.append(("bond_req", index, loc))
-            loc +=1
-            x0.append(evaluator.top.bond_types[index].req)
+            if fit_bonds_k:
+                guess_vector_keys.append(("bond_k", index, loc))
+                loc +=1
+                x0.append(evaluator.top.bond_types[index].k)
+            if fit_bonds_req:
+                guess_vector_keys.append(("bond_req", index, loc))
+                loc +=1
+                x0.append(evaluator.top.bond_types[index].req)
         for index in range(len(evaluator.top.angle_types)):
-            guess_vector_keys.append(("angle_k", index, loc))
-            loc +=1
-            x0.append(evaluator.top.angle_types[index].k)
-            guess_vector_keys.append(("angle_theteq", index, loc))
-            loc +=1
-            x0.append(evaluator.top.angle_types[index].theteq)
+            if fit_angles_k:
+                guess_vector_keys.append(("angle_k", index, loc))
+                loc +=1
+                x0.append(evaluator.top.angle_types[index].k)
+            if fit_angles_theteq:
+                guess_vector_keys.append(("angle_theteq", index, loc))
+                loc +=1
+                x0.append(evaluator.top.angle_types[index].theteq)
         for index in range(len(evaluator.top.dihedral_types)):
-            guess_vector_keys.append(("dihedral_phi_k", index, loc))
-            loc +=1
-            x0.append(evaluator.top.dihedral_types[index].phi_k)
-            #x0.append(evaluator.top.dihedral_types[index].phase)
+            if fit_dihedrals_phi_k:
+                guess_vector_keys.append(("dihedral_phi_k", index, loc))
+                loc +=1
+                x0.append(evaluator.top.dihedral_types[index].phi_k)
+            if fit_dihedrals_phase:
+                guess_vector_keys.append(("dihedral_phase", index, loc))
+                loc +=1
+                x0.append(evaluator.top.dihedral_types[index].phase)
         
         def cost_function(guess_vector, guess_vector_keys, evaluator, target_hessian):
             #unpack guess vector into top
             for i, key in enumerate(guess_vector_keys):
                 if key[0] == "bond_k":
                     evaluator.top.bond_types[key[1]].k = guess_vector[key[2]]
-                #elif key[0] == "bond_req":
-                #    evaluator.top.bond_types[key[1]].req = guess_vector[key[2]]
+                elif key[0] == "bond_req":
+                    evaluator.top.bond_types[key[1]].req = guess_vector[key[2]]
                 elif key[0] == "angle_k":
                     evaluator.top.angle_types[key[1]].k = guess_vector[key[2]]
-                #elif key[0] == "angle_theteq":
-                #    evaluator.top.angle_types[key[1]].theteq = guess_vector[key[2]]
+                elif key[0] == "angle_theteq":
+                    evaluator.top.angle_types[key[1]].theteq = guess_vector[key[2]]
                 elif key[0] == "dihedral_phi_k":
                     evaluator.top.dihedral_types[key[1]].phi_k = guess_vector[key[2]]
-                #elif key[0] == "dihedral_phase":
-                    #evaluator.top.dihedral_types[key[1]].phase = guess_vector[key[2]]
+                elif key[0] == "dihedral_phase":
+                    evaluator.top.dihedral_types[key[1]].phase = guess_vector[key[2]]
             evaluator.update_topology()
             evaluator.set_coordinates(self.coordinates*parmed.unit.bohr.conversion_factor_to(parmed.unit.nanometer))
 

@@ -150,27 +150,25 @@ class openmmFullHessianFit:
             elif target == 'eigenvectors':
                 res = RMSD(target_eigenvectors, eigenvectors)
             elif target == 'frequencies':
-                mask = target_eigenvalues > 1e-1
-                target_freq = np.sqrt(target_eigenvalues[mask])
-                freq = np.sqrt(eigenvalues[mask])
+                target_freq = np.sqrt(target_eigenvalues.astype(np.complex128))
+                freq = np.sqrt(eigenvalues.astype(np.complex128))
                 res = RMSD(target_freq, freq)
             elif target == 'frequency_weighted_eigenvectors':
-                #to filter out negative e.v. already in target 
-                mask = target_eigenvalues > 1e-1
-                target_freq = np.sqrt(target_eigenvalues)
-                freq = np.sqrt(eigenvalues)
+                target_freq = np.sqrt(target_eigenvalues.astype(np.complex128))
+                freq = np.sqrt(eigenvalues.astype(np.complex128))
                 res = 0.0
-                for i in range(mask.shape[0]):
-                    if mask[i]:
-                        res += np.average((target_freq[i] * target_eigenvectors[:,i] - freq[i] * eigenvectors[:,i])**2)
+                for i in range(freq.shape[0]):
+                    res += np.average((target_freq[i] * target_eigenvectors[:,i] - freq[i] * eigenvectors[:,i])**2)
                 res = res / mask.sum()
                 res = np.sqrt(res)
 
             else:
                 raise ValueError('Not a valid choice of target')
             #                       gradient is minus force
-            res += k_gradient * RMSD(target_gradient, -1.0*evaluator.get_force())
-            print(res)
+            res = res.real
+            gradient_term = k_gradient * RMSD(target_gradient, -1.0*evaluator.get_force())
+            print(res, gradient_term / k_gradient)
+            res += gradient_term
             return res
 
         fun = partial(cost_function, guess_vector_keys=guess_vector_keys, evaluator=evaluator, target_eigenvalues=self.target_eigenvalues,

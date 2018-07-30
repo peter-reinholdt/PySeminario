@@ -5,20 +5,25 @@ from sys import stdout
 import parmed
 import numpy as np
 
-class classical(object):
-    def __init__(self, topology_file):
-        self.top = parmed.load_file(topology_file)
-        self.system = self.top.createSystem(nonbondedMethod=app.NoCutoff, nonbondedCutoff=99.9*unit.nanometers, constraints=None, rigidWater=False)
-        self.integrator = mm.VerletIntegrator(0.002*unit.picoseconds)
-        self.platform = mm.Platform.getPlatformByName('CPU')
-        self.properties = {}
-        self.simulation = app.Simulation(self.top.topology, self.system, self.integrator, self.platform, self.properties)
+
+class Evaluator(object):
+    def __init__(self, topology, coordinates):
+        self.top = topology
+        self.update_topology()
+        self.set_coordinates(coordinates)
 
     def set_coordinates(self, coordinates):
         self.simulation.context.setPositions(coordinates)
+
+    def update_topology(self):
+        self.system = self.top.createSystem(nonbondedMethod=app.NoCutoff, nonbondedCutoff=99.9*unit.nanometers, constraints=None, rigidWater=False)
+        self.integrator = mm.VerletIntegrator(0.001*unit.picoseconds)
+        self.platform = mm.Platform.getPlatformByName('CPU')
+        self.properties = {}
+        self.simulation = app.Simulation(self.top.topology, self.system, self.integrator, self.platform, self.properties)
     
     def get_energy(self):
-        yystate = self.simulation.context.getState(getEnergy=True)
+        state = self.simulation.context.getState(getEnergy=True)
         energy = state.getPotentialEnergy().value_in_unit(unit.kilojoule_per_mole)
         return energy
 
@@ -49,12 +54,5 @@ class classical(object):
                 hessian[i_atom*3+i_cart] = ((force_plus - force_minus) / (2*DELTA)).flat[:]
         #hessian is second derivative of energy; force is *negative* of first derivative of energy...
         #adjust sign accordingly
+        self.set_coordinates(coordinates)
         return -hessian
-
-    def get_mass_weighted_hessian(self):
-        hessian = self.get_hessian()
-        M = np.zeros(hessian.shape)
-        for atom in self.top.atoms:
-            for i in range(3):
-                M[atom.idx*3+i, atom.idx*3+i] = 1.0/np.sqrt(atom.mass)
-        return M @ hessian @ M
